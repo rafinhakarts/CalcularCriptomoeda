@@ -1,0 +1,1 @@
+Esse código vai ajudar a calcular o valor final a ser atingido pela moeda pra uma venda favorável, visando margens de lucro tanto em %, quanto valor inteiro em usd, brl, etc.
