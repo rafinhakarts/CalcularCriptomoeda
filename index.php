@@ -1,40 +1,50 @@
 <?php
-error_reporting(0);
+error_reporting(1);
 $targetPrice = null;
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $investedAmount = floatval($_POST["invested_usd"]);
     $btcPrice = floatval($_POST["btc_price"]);
-    $taxRate = 0.0015; // 0.075% compra + 0.075% venda
+    $taxRate = 0.0015;
 
-    $calculationType = $_POST["calculation_type"];
+    // Verifica se o preço é maior que zero para evitar divisão por zero
+    if ($btcPrice > 0 && $investedAmount > 0) {
+        $coinQty = $investedAmount / $btcPrice;
 
-    if ($calculationType === 'percent') {
-        $desiredProfit = $_POST['porcentagem'] / 100;
-        $totalGain = $desiredProfit - $taxRate;
-        $targetPrice = $btcPrice * (1 + $totalGain);
-    } elseif ($calculationType === 'usd') {
-        $desiredProfitUSD = floatval($_POST['porcentagem_usd']);
-        $targetPrice = ($btcPrice + $desiredProfitUSD) / (1 - $taxRate);
+        $calculationType = $_POST["calculation_type"];
+
+        if ($calculationType === 'percent') {
+            $profitPercent = floatval($_POST['porcentagem']) / 100;
+            $profitUSD = $investedAmount * $profitPercent;
+            $targetPrice = ($investedAmount + $profitUSD) / ($coinQty * (1 - $taxRate));
+        } elseif ($calculationType === 'usd') {
+            $profitUSD = floatval($_POST['porcentagem_usd']);
+            $targetPrice = ($investedAmount + $profitUSD) / ($coinQty * (1 - $taxRate));
+        }
     }
 }
+
 ?>
 
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Calculadora de Lucro Criptomoedas</title>
+    <title>Calculadora de Venda de Criptomoeda</title>
 </head>
 <body>
 <center>
-    <h2>Calculadora de Lucro Criptomoedas</h2>
-    <p><strong>Obs:</strong> Já leva em consideração as taxas da Binance (0.15%)</p>
+    <h2>Calculadora de Venda de Criptomoeda</h2>
+    <p><strong>Obs:</strong> A taxa da Binance (0.15%) já está considerada.</p>
 
     <form method="post" onsubmit="return validarFormulario()">
-        <label>Preço atual da Criptomoeda (USD):</label><br>
+        <label>Valor que será investido (USD):</label><br>
+        <input type="number" name="invested_usd" placeholder="Ex: 500.00" step="0.01" required><br><br>
+
+        <label>Preço atual da moeda (USD):</label><br>
         <input type="number" name="btc_price" placeholder="Ex: 30000.00" step="0.0001" required><br><br>
 
-        <label>Escolha o tipo de cálculo:</label><br>
+        <label>Tipo de cálculo:</label><br>
         <select name="calculation_type" id="tipoCalculo" required>
             <option value="percent">Percentual de lucro (%)</option>
             <option value="usd">Lucro em USD</option>
@@ -47,20 +57,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <div id="usd-form" style="display:none;">
             <label>Lucro desejado em USD:</label><br>
-            <input type="number" name="porcentagem_usd" id="campoUSD" step="0.0001"><br><br>
+            <input type="number" name="porcentagem_usd" id="campoUSD" step="0.01"><br><br>
         </div>
 
         <button type="submit">Calcular</button>
     </form>
 
     <?php if ($targetPrice): ?>
-        <h3>📈 Preço alvo:</h3>
+        <h3>📈 Preço alvo de venda por moeda:</h3>
         <p><strong>$<?= number_format($targetPrice, 4, '.', ',') ?></strong></p>
 
         <?php if ($calculationType === 'percent'): ?>
             <p>Venda a esse valor para obter <strong><?= floatval($_POST['porcentagem']) ?>%</strong> de lucro líquido (com taxas)</p>
         <?php elseif ($calculationType === 'usd'): ?>
-            <p>Venda a esse valor para obter <strong>$<?= number_format($_POST['porcentagem_usd'], 4, '.', ',') ?></strong> de lucro (com taxas)</p>
+            <p>Venda a esse valor para obter <strong>$<?= number_format($_POST['porcentagem_usd'], 2, '.', ',') ?></strong> de lucro (com taxas)</p>
         <?php endif; ?>
     <?php endif; ?>
 </center>
@@ -91,7 +101,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         } else {
             if (!campoUSD.value) {
-                alert("Informe o lucro em USD.");
+                alert("Informe o lucro desejado em USD.");
                 campoUSD.focus();
                 return false;
             }
